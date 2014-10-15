@@ -6,15 +6,13 @@ from gzip import GzipFile
 import datetime
 from tempfile import SpooledTemporaryFile
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO  # noqa
+from io import StringIO  # noqa
 
 from django.core.files.base import File
 from django.core.files.storage import Storage
 from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
-from django.utils.encoding import force_unicode, smart_str, filepath_to_uri
+from django.utils.encoding import smart_str, filepath_to_uri
+from django.conf import settings
 
 try:
     from boto import __version__ as boto_version
@@ -94,10 +92,9 @@ def safe_join(base, *paths):
     Paths outside the base path indicate a possible security
     sensitive operation.
     """
-    from urlparse import urljoin
-    base_path = force_unicode(base)
+    from urllib.parse import urljoin
+    base_path = base
     base_path = base_path.rstrip('/')
-    paths = [force_unicode(p) for p in paths]
 
     final_path = base_path
     for path in paths:
@@ -164,7 +161,7 @@ class S3BotoStorage(Storage):
             access_key, secret_key = self._get_access_keys()
         self.connection = self.connection_class(access_key, secret_key,
             calling_format=self.calling_format)
-    file_class = S3BotoStorageFile
+#    file_class = S3BotoStorageFile
     key_class = S3Key
 
     @property
@@ -273,7 +270,7 @@ class S3BotoStorage(Storage):
         name = self._normalize_name(cleaned_name)
         headers = self.headers.copy()
         content_type = getattr(content, 'content_type',
-            mimetypes.guess_type(name)[0] or Key.DefaultContentType)
+            mimetypes.guess_type(name)[0] or self.key_class.DefaultContentType)
 
         # setting the content_type in the key object is not enough.
         self.headers.update({'Content-Type': content_type})
