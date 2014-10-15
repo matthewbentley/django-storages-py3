@@ -1,21 +1,27 @@
 import os
 import mimetypes
+import posixpath
+import mimetypes
+from gzip import GzipFile
+import datetime
+from tempfile import SpooledTemporaryFile
 
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO  # noqa
 
-from django.conf import settings
 from django.core.files.base import File
 from django.core.files.storage import Storage
 from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
-from django.utils.encoding import force_unicode, smart_str
+from django.utils.encoding import force_unicode, smart_str, filepath_to_uri
 
 try:
+    from boto import __version__ as boto_version
     from boto.s3.connection import S3Connection, SubdomainCallingFormat
     from boto.exception import S3ResponseError
-    from boto.s3.key import Key
+    from boto.s3.key import Key as S3Key
+    from boto.utils import parse_ts
 except ImportError:
     raise ImproperlyConfigured("Could not load Boto's S3 bindings.\n"
                                "See https://github.com/boto/boto")
@@ -56,6 +62,23 @@ if SECURE_URLS:
 
 if IS_GZIPPED:
     from gzip import GzipFile
+from storages.utils import setting
+
+boto_version_info = tuple([int(i) for i in boto_version.split('-')[0].split('.')])
+
+if boto_version_info[:2] < (2, 4):
+    raise ImproperlyConfigured("The installed Boto library must be 2.4 or "
+                               "higher.\nSee https://github.com/boto/boto")
+
+
+def parse_ts_extended(ts):
+    RFC1123 = '%a, %d %b %Y %H:%M:%S %Z'
+    rv = None
+    try:
+        rv = parse_ts(ts)
+    except ValueError:
+        rv = datetime.datetime.strptime(ts, RFC1123)
+    return rv
 
 
 def safe_join(base, *paths):
@@ -141,6 +164,8 @@ class S3BotoStorage(Storage):
             access_key, secret_key = self._get_access_keys()
         self.connection = self.connection_class(access_key, secret_key,
             calling_format=self.calling_format)
+    file_class = S3BotoStorageFile
+    key_class = S3Key
 
     @property
     def bucket(self):
@@ -149,6 +174,7 @@ class S3BotoStorage(Storage):
         create it.
         """
         if not hasattr(self, '_bucket'):
+#        if self._bucket is None:
             self._bucket = self._get_or_create_bucket(self.bucket_name)
         return self._bucket
 
@@ -229,6 +255,8 @@ class S3BotoStorage(Storage):
             zfile.write(content.read())
         finally:
             zfile.close()
+
+        zbuf.seek(0)
         content.file = zbuf
         content.seek(0)
         return content
@@ -287,7 +315,7 @@ class S3BotoStorage(Storage):
         name = self._normalize_name(self._clean_name(name))
         # for the bucket.list and logic below name needs to end in /
         # But for the root path "" we leave it as an empty string
-        if name:
+        if name and not name.endswith('/'):
             name += '/'
 
         dirlist = self.bucket.list(self._encode_name(name))

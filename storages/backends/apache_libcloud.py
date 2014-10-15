@@ -32,6 +32,10 @@ class LibCloudStorage(Storage):
         if not self.provider:
             raise ImproperlyConfigured(
                 'LIBCLOUD_PROVIDERS %s not defined or invalid' % provider_name)
+
+        extra_kwargs = {}
+        if 'region' in self.provider:
+            extra_kwargs['region'] = self.provider['region']
         try:
             provider_type = self.provider['type']
             if isinstance(provider_type, basestring):
@@ -44,8 +48,9 @@ class LibCloudStorage(Storage):
             self.driver = Driver(
                 self.provider['user'],
                 self.provider['key'],
-                )
-        except Exception, e:
+                **extra_kwargs
+            )
+        except Exception as e:
             raise ImproperlyConfigured(
                 "Unable to create libcloud driver type %s: %s" % \
                 (self.provider.get('type'), e))
@@ -131,7 +136,8 @@ class LibCloudStorage(Storage):
     def _read(self, name, start_range=None, end_range=None):
         obj = self._get_object(name)
         # TOFIX : we should be able to read chunk by chunk
-        return self.driver.download_object_as_stream(obj, obj.size).next()
+#        return self.driver.download_object_as_stream(obj, obj.size).next()
+        return next(self.driver.download_object_as_stream(obj, obj.size))
 
     def _save(self, name, file):
         self.driver.upload_object_via_stream(iter(file), self._get_bucket(), name)

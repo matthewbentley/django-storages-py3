@@ -18,11 +18,11 @@ __all__ = (
     #'S3BotoStorageFileTests',
 )
 
+
 class S3BotoTestCase(TestCase):
     @mock.patch('storages.backends.s3boto.S3Connection')
     def setUp(self, S3Connection):
         self.storage = s3boto.S3BotoStorage()
-
 
 class SafeJoinTest(TestCase):
     def test_normal(self):
@@ -200,6 +200,7 @@ class S3BotoStorageTests(S3BotoTestCase):
     #    f = ContentFile(content)
     #    self.storage.save(name, f)
     #    self.assertEqual(content, urlopen(self.storage.url(name)).read())
+
 
 #class S3BotoStorageFileTests(S3BotoTestCase):
 #    def test_multipart_upload(self):

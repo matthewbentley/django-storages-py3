@@ -16,8 +16,8 @@ from django.core.exceptions import ImproperlyConfigured
 try:
     import couchdb
 except ImportError:
-    raise ImproperlyConfigured, "Could not load couchdb dependency.\
-    \nSee http://code.google.com/p/couchdb-python/"
+    raise ImproperlyConfigured("Could not load couchdb dependency.\
+    \nSee http://code.google.com/p/couchdb-python/")
 
 DEFAULT_SERVER= getattr(settings, 'COUCHDB_DEFAULT_SERVER', 'http://couchdb.local:5984')
 STORAGE_OPTIONS= getattr(settings, 'COUCHDB_STORAGE_OPTIONS', {})
@@ -28,9 +28,9 @@ class CouchDBStorage(Storage):
     CouchDBStorage - a Django Storage class for CouchDB.
 
     The CouchDBStorage can be configured in settings.py, e.g.::
-    
+
         COUCHDB_STORAGE_OPTIONS = {
-            'server': "http://example.org", 
+            'server': "http://example.org",
             'database': 'database_name'
         }
 
@@ -73,9 +73,9 @@ class CouchDBStorage(Storage):
         return 0
 
     def url(self, name):
-        return urljoin(self.base_url, 
-                       os.path.join(quote_plus(self.db.name), 
-                       quote_plus(name), 
+        return urljoin(self.base_url,
+                       os.path.join(quote_plus(self.db.name),
+                       quote_plus(name),
                        'content'))
 
     def delete(self, name):
@@ -131,5 +131,3 @@ class CouchDBFile(File):
         if self._is_dirty:
             self._storage._put_file(self._name, self.file.getvalue())
         self.file.close()
-
-

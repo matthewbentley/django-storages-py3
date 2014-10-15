@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import File
 from django.core.files.storage import Storage
 from django.db import connections
@@ -7,14 +8,14 @@ from django.utils.encoding import force_unicode
 try:
     from gridfs import GridFS, NoFile
 except ImportError:
-    raise ImproperlyConfigured, "Could not load gridfs dependency.\
-    \nSee http://www.mongodb.org/display/DOCS/GridFS"
+    raise ImproperlyConfigured("Could not load gridfs dependency.\
+    \nSee http://www.mongodb.org/display/DOCS/GridFS")
 
 try:
     from pymongo import Connection
 except ImportError:
-    raise ImproperlyConfigured, "Could not load pymongo dependency.\
-    \nSee http://github.com/mongodb/mongo-python-driver"
+    raise ImproperlyConfigured("Could not load pymongo dependency.\
+    \nSee http://github.com/mongodb/mongo-python-driver")
 
 class GridFSStorage(Storage):
     @property
@@ -38,7 +39,10 @@ class GridFSStorage(Storage):
     def _save(self, name, content):
         name = force_unicode(name).replace('\\', '/')
         content.open()
-        file = self.fs.new_file(filename=name)
+        kwargs = {'filename': name}
+        if hasattr(content.file, 'content_type'):
+            kwargs['content_type'] = content.file.content_type
+        file = self.fs.new_file(**kwargs)
         if hasattr(content, 'chunks'):
             for chunk in content.chunks():
                 file.write(chunk)
@@ -97,4 +101,3 @@ class GridFSFile(File):
 
     def close(self):
         self.file.close()
-

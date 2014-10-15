@@ -1,3 +1,4 @@
+from __future__ import print_function
 # SFTP storage backend for Django.
 # Author: Brent Tubbs <brent.tubbs@gmail.com>
 # License: MIT
@@ -81,6 +82,7 @@ class SFTPStorage(Storage):
         self._known_host_file = getattr(settings, 'SFTP_KNOWN_HOST_FILE', None)
 
         self._root_path = settings.SFTP_STORAGE_ROOT
+        self._base_url = settings.MEDIA_URL
 
         # for now it's all posix paths.  Maybe someday we'll support figuring
         # out if the remote host is windows.
@@ -100,7 +102,7 @@ class SFTPStorage(Storage):
 
         try:
             self._ssh.connect(self._host, **self._params)
-        except paramiko.AuthenticationException, e:
+        except paramiko.AuthenticationException as e:
             if self._interactive and 'password' not in self._params:
                 # If authentication has failed, and we haven't already tried
                 # username/password, and configuration allows it, then try
@@ -110,9 +112,9 @@ class SFTPStorage(Storage):
                 self._params['password'] = getpass.getpass()
                 self._connect()
             else:
-                raise paramiko.AuthenticationException, e
-        except Exception, e:
-            print e
+                raise paramiko.AuthenticationException(e)
+        except Exception as e:
+            print(e)
 
         if not hasattr(self, '_sftp'):
             self._sftp = self._ssh.open_sftp()
@@ -228,6 +230,7 @@ class SFTPStorage(Storage):
     def url(self, name):
         remote_path = self._remote_path(name)
         return 'sftp://%s/%s' % (self._host, remote_path)
+
 
 class SFTPStorageFile(File):
     def __init__(self, name, storage, mode):
